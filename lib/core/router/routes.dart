@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/router/app_router.dart';
 import 'package:hiddify/features/common/adaptive_root_scaffold.dart';
 import 'package:hiddify/features/config_option/overview/config_options_page.dart';
+import 'package:hiddify/features/config_option/routing_rules/routing_rules_page.dart';
 import 'package:hiddify/features/config_option/widget/quick_settings_modal.dart';
 
 import 'package:hiddify/features/home/widget/home_page.dart';
@@ -46,6 +47,10 @@ GlobalKey<NavigatorState>? _dynamicRootKey = useMobileRouter ? rootNavigatorKey 
         TypedGoRoute<ConfigOptionsRoute>(
           path: "config-options",
           name: ConfigOptionsRoute.name,
+        ),
+        TypedGoRoute<RoutingRulesRoute>(
+          path: "routing-rules",
+          name: RoutingRulesRoute.name,
         ),
         TypedGoRoute<QuickSettingsRoute>(
           path: "quick-settings",
@@ -121,6 +126,10 @@ class MobileWrapperRoute extends ShellRouteData {
     TypedGoRoute<ConfigOptionsRoute>(
       path: "/config-options",
       name: ConfigOptionsRoute.name,
+    ),
+    TypedGoRoute<RoutingRulesRoute>(
+      path: "/routing-rules",
+      name: RoutingRulesRoute.name,
     ),
     TypedGoRoute<SettingsRoute>(
       path: "/settings",
@@ -288,6 +297,24 @@ class QuickSettingsRoute extends GoRouteData {
       name: name,
       builder: (controller) => const QuickSettingsModal(),
     );
+  }
+}
+
+class RoutingRulesRoute extends GoRouteData {
+  const RoutingRulesRoute();
+  static const name = "Routing Rules";
+
+  static final GlobalKey<NavigatorState>? $parentNavigatorKey = _dynamicRootKey;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) {
+    if (useMobileRouter) {
+      return const MaterialPage(
+        name: name,
+        child: RoutingRulesPage(),
+      );
+    }
+    return const NoTransitionPage(name: name, child: RoutingRulesPage());
   }
 }
 
