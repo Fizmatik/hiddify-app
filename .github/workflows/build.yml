@@ -74,7 +74,7 @@ jobs:
             targets: exe,msix
 
           - platform: linux
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             aarch: amd64
             targets: AppImage,deb,rpm
 
@@ -95,20 +95,19 @@ jobs:
 
       - name: Import Apple Codesign Certificates
         if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') }}
+        continue-on-error: true
         uses: apple-actions/import-codesign-certs@v3
-        with: 
+        with:
             p12-file-base64: "${{ secrets.APPLE_CERTIFICATE_P12 }}"
             p12-password: "${{ secrets.APPLE_CERTIFICATE_P12_PASSWORD }}"
 
       - name: Import Apple Mobile Provisioning Profile
         if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') }}
+        continue-on-error: true
         run: |
            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
            echo "${{secrets.APPLE_MOBILE_PROVISIONING_PROFILES_TARGZ_BASE64}}"|base64 --decode | tar xz -C ~/Library/MobileDevice/Provisioning\ Profiles
            ls ~/Library/MobileDevice/Provisioning\ Profiles
-        #   ls ~/Library/MobileDevice/Provisioning\ Profiles
-        #   echo "${{secrets.NEW_APPLE_MOBILE_PROVISIONING_PROFILES_TARXZ_BASE64}}"|base64 --decode | tar xJ -C ~/Library/MobileDevice/Provisioning\ Profiles
-        #   # echo "${{secrets.NEW_APPLE_MOBILE_PROVISIONING_PROFILES_TARGZ_BASE64_2}}"|base64 --decode | tar xz -C ~/Library/MobileDevice/Provisioning\ Profiles
           
 
 
@@ -150,14 +149,23 @@ jobs:
       - name: Setup Android Signing Properties
         if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'android') }}
         run: |
-          echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 --decode > android/key.jks
-          echo "storeFile=$(pwd)/android/key.jks" > android/key.properties
-          echo "storePassword=${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}" >> android/key.properties
-          echo "keyPassword=${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}" >> android/key.properties
-          echo "keyAlias=${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" >> android/key.properties
+          if [ -n "${{ secrets.ANDROID_SIGNING_KEY }}" ]; then
+            echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 --decode > android/key.jks
+            echo "storeFile=$(pwd)/android/key.jks" > android/key.properties
+            echo "storePassword=${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}" >> android/key.properties
+            echo "keyPassword=${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}" >> android/key.properties
+            echo "keyAlias=${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" >> android/key.properties
+          else
+            keytool -genkey -v -keystore android/key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias hiddify -storepass android -keypass android -dname "CN=Hiddify,O=Hiddify,C=US"
+            echo "storeFile=$(pwd)/android/key.jks" > android/key.properties
+            echo "storePassword=android" >> android/key.properties
+            echo "keyPassword=android" >> android/key.properties
+            echo "keyAlias=hiddify" >> android/key.properties
+          fi
 
       - name: Setup Windows Signing Properties
         if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
+        continue-on-error: true
         run: |
             [IO.File]::WriteAllBytes("windows\sign.pfx", [Convert]::FromBase64String("${{ secrets.WINDOWS_SIGNING_KEY }}"))
             (Get-Content "windows\packaging\msix\make_config.yaml") -replace '^certificate_password:.*$', 'certificate_password: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}' | Set-Content "windows\packaging\msix\make_config.yaml"
@@ -185,6 +193,7 @@ jobs:
 
       - name: Code Sign
         if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
+        continue-on-error: true
         uses: hiddify/signtool-code-sign-sha256@main
         with:
           certificate: '${{ secrets.WINDOWS_SIGNING_KEY }}'
@@ -204,6 +213,7 @@ jobs:
           
       - name: Upload Debug Symbols
         if: ${{ inputs.upload-artifact && inputs.tag-name != 'draft' }}
+        continue-on-error: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
