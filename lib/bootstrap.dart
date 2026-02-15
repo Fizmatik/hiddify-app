@@ -133,10 +133,14 @@ Future<void> lazyBootstrap(
     () => container.read(singboxServiceProvider).init(),
   );
   if (PlatformUtils.isDesktop) {
-    await _safeInit(
-      "system tray",
-      () => container.read(systemTrayNotifierProvider.future),
-      timeout: 1000,
+    // Initialize system tray without blocking bootstrap.
+    // The tray provider is keepAlive and will rebuild automatically
+    // when connection/proxy data becomes available.
+    unawaited(
+      container.read(systemTrayNotifierProvider.future).then(
+        (_) => Logger.bootstrap.debug("[system tray] initialized"),
+        onError: (e) => Logger.bootstrap.warning("[system tray] init deferred: $e"),
+      ),
     );
   }
 

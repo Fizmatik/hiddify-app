@@ -14,7 +14,16 @@ struct _MyApplication
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
-#define ICON_PATH "./hiddify.png"
+
+// Resolve icon path relative to the executable's directory.
+static gchar *get_icon_path()
+{
+  g_autofree gchar *exe_path = g_file_read_link("/proc/self/exe", NULL);
+  if (exe_path == NULL)
+    return NULL;
+  g_autofree gchar *exe_dir = g_path_get_dirname(exe_path);
+  return g_build_filename(exe_dir, "data", "flutter_assets", "assets", "images", "tray_icon.png", NULL);
+}
 
 // Implements GApplication::activate.
 static void my_application_activate(GApplication *application)
@@ -22,7 +31,10 @@ static void my_application_activate(GApplication *application)
   MyApplication *self = MY_APPLICATION(application);
   GtkWindow *window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
-  gtk_window_set_icon_from_file(window, ICON_PATH, NULL);
+
+  g_autofree gchar *icon_path = get_icon_path();
+  if (icon_path != NULL)
+    gtk_window_set_icon_from_file(window, icon_path, NULL);
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
