@@ -61,8 +61,43 @@ jobs:
         run: echo "::set-output name=datetime::$(date +'%d.%H.%M')"
 
 
-  build:
+  build-core:
     needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install cross-compile deps
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+
+      - name: Build core for Linux
+        run: make -C hiddify-core -f Makefile linux-amd64
+
+      - name: Build core for Windows (cross-compile)
+        run: make -C hiddify-core -f Makefile windows-amd64
+
+      - name: Build core for Android
+        run: |
+          make -C hiddify-core -f Makefile lib_install
+          make -C hiddify-core -f Makefile android
+
+      - name: Upload core artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: hiddify-core-all
+          path: hiddify-core/bin/
+          retention-days: 1
+
+  build:
+    needs: [test, build-core]
     permissions: write-all
     continue-on-error: true
 
@@ -88,36 +123,11 @@ jobs:
             aarch: amd64
             targets: deb,gz,AppImage
 
-          # - platform: linux-amd64
-          #   os: ubuntu-22.04
-          #   aarch: amd64
-          #   targets: deb,gz
-
-          # - platform: linux-arm64
-          #   os: ubuntu-24.04-arm
-          #   aarch: arm64
-          #   targets: deb,gz
-
-          # - platform: linux-amd64-musl
-          #   os: ubuntu-22.04
-          #   aarch: amd64
-          #   targets: deb,gz
-
-          # - platform: linux-arm64-musl
-          #   os: ubuntu-24.04-arm
-          #   aarch: arm64
-          #   targets: deb,gz
-            
           - platform: macos
             os: macos-15
             aarch: universal
             targets: dmg,pkg
-            
-          # - platform: ios
-          #   os: macos-15
-          #   aarch: universal
-          #   filename: hiddify-ios
-          #   targets: ipa
+
     runs-on: ${{ matrix.os }}
     env:
       HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE_P12 != '' }}
@@ -129,7 +139,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Go
+      - name: Download pre-built core
+        uses: actions/download-artifact@v7
+        with:
+          name: hiddify-core-all
+          path: hiddify-core/bin/
+
+      - name: Setup Go (macOS builds core natively)
+        if: startsWith(matrix.os, 'macos')
         uses: actions/setup-go@v5
         with:
           go-version: '1.24'

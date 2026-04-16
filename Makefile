@@ -467,14 +467,31 @@ macos-release:
 ios-release: #not tested
 	fastforge package --platform ios --targets ipa --build-export-options-plist  ios/exportOptions.plist $(DISTRIBUTOR_ARGS)
 
-android-libs: build-android-libs
+# If core is pre-built (CI artifact), skip; otherwise build from submodule
+android-libs:
+	@if [ -f $(BINDIR)/$(LIB_NAME).aar ] || [ -f $(ANDROID_OUT)/$(LIB_NAME).aar ]; then \
+		echo "Core already built, skipping android-libs"; \
+		[ -f $(BINDIR)/$(LIB_NAME).aar ] && { mkdir -p $(ANDROID_OUT); mv $(BINDIR)/$(LIB_NAME).aar $(ANDROID_OUT)/; } || true; \
+	else \
+		make build-android-libs; \
+	fi
 
 android-apk-libs: android-libs
 android-aab-libs: android-libs
 
-windows-libs: build-windows-libs
+windows-libs:
+	@if [ -f $(DESKTOP_OUT)/$(LIB_NAME).dll ]; then \
+		echo "Core already built, skipping windows-libs"; \
+	else \
+		make build-windows-libs; \
+	fi
 
-linux-amd64-libs: build-linux-libs
+linux-amd64-libs:
+	@if [ -f $(DESKTOP_OUT)/lib/$(LIB_NAME).so ]; then \
+		echo "Core already built, skipping linux-libs"; \
+	else \
+		make build-linux-libs; \
+	fi
 
 linux-arm64-libs:
 	make -C hiddify-core -f Makefile linux-arm64
@@ -485,7 +502,12 @@ linux-amd64-musl-libs:
 linux-arm64-musl-libs:
 	make -C hiddify-core -f Makefile linux-custom
 
-macos-libs: build-macos-libs
+macos-libs:
+	@if [ -f $(DESKTOP_OUT)/$(LIB_NAME).dylib ]; then \
+		echo "Core already built, skipping macos-libs"; \
+	else \
+		make build-macos-libs; \
+	fi
 
 ios-libs: #not tested
 	mkdir -p $(IOS_OUT)
