@@ -77,21 +77,44 @@ jobs:
         run: |
           make -C hiddify-core -f Makefile cronet-amd64
           make -C hiddify-core -f Makefile linux-amd64
+          mkdir -p /tmp/core-linux
+          cp -r hiddify-core/bin/* /tmp/core-linux/
 
       - name: Build core for Windows (cross-compile)
-        run: make -C hiddify-core -f Makefile windows-amd64
+        run: |
+          make -C hiddify-core -f Makefile windows-amd64
+          mkdir -p /tmp/core-windows
+          cp -r hiddify-core/bin/* /tmp/core-windows/
 
       - name: Build core for Android
         continue-on-error: true
         run: |
           make -C hiddify-core -f Makefile lib_install
           make -C hiddify-core -f Makefile android
+          mkdir -p /tmp/core-android
+          cp -r hiddify-core/bin/* /tmp/core-android/
 
-      - name: Upload core artifacts
+      - name: Upload Linux core
         uses: actions/upload-artifact@v6
         with:
-          name: hiddify-core-all
-          path: hiddify-core/bin/
+          name: core-linux
+          path: /tmp/core-linux/
+          retention-days: 1
+
+      - name: Upload Windows core
+        uses: actions/upload-artifact@v6
+        with:
+          name: core-windows
+          path: /tmp/core-windows/
+          retention-days: 1
+
+      - name: Upload Android core
+        if: success() || failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@v6
+        with:
+          name: core-android
+          path: /tmp/core-android/
           retention-days: 1
 
   build:
@@ -137,10 +160,26 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Download pre-built core
+      - name: Download pre-built core (Linux)
+        if: startsWith(matrix.platform, 'linux')
         uses: actions/download-artifact@v7
         with:
-          name: hiddify-core-all
+          name: core-linux
+          path: hiddify-core/bin/
+
+      - name: Download pre-built core (Windows)
+        if: matrix.platform == 'windows'
+        uses: actions/download-artifact@v7
+        with:
+          name: core-windows
+          path: hiddify-core/bin/
+
+      - name: Download pre-built core (Android)
+        if: startsWith(matrix.platform, 'android')
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          name: core-android
           path: hiddify-core/bin/
 
       - name: Setup Go (macOS builds core natively)
