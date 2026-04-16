@@ -11,6 +11,7 @@ import 'package:hiddify/features/settings/widget/preference_tile.dart';
 import 'package:hiddify/singbox/model/singbox_config_enum.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hiddify/features/route_rules/notifier/rules_notifier.dart';
 
 class RouteOptionsPage extends HookConsumerWidget {
   const RouteOptionsPage({super.key});
@@ -101,6 +102,16 @@ class RouteOptionsPage extends HookConsumerWidget {
             title: t.pages.settings.routing.ipv6Route,
             icon: Icons.looks_6_rounded,
             presentChoice: (value) => value.present(t),
+          ),
+          ListTile(
+            title: Text(t.pages.settings.routing.routeRule.title),
+            leading: const Icon(Icons.route_rounded),
+            trailing: Badge(
+              label: Text('${ref.watch(rulesNotifierProvider).length}'),
+              isLabelVisible: ref.watch(rulesNotifierProvider).isNotEmpty,
+              child: const Icon(Icons.chevron_right_rounded),
+            ),
+            onTap: () => context.goNamed('routeRules'),
           ),
         ],
       ),
