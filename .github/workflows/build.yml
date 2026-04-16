@@ -119,6 +119,10 @@ jobs:
           #   filename: hiddify-ios
           #   targets: ipa
     runs-on: ${{ matrix.os }}
+    env:
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE_P12 != '' }}
+      HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_SIGNING_KEY != '' }}
+      HAS_ANDROID_KEY: ${{ secrets.ANDROID_SIGNING_KEY != '' }}
     steps:
       - name: checkout
         uses: actions/checkout@v6
@@ -131,14 +135,14 @@ jobs:
           go-version: '1.24'
 
       - name: Import Apple Codesign Certificates
-        if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') && secrets.APPLE_CERTIFICATE_P12 != '' }}
+        if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') && env.HAS_APPLE_CERT == 'true' }}
         uses: apple-actions/import-codesign-certs@v6
         with:
             p12-file-base64: "${{ secrets.APPLE_CERTIFICATE_P12 }}"
             p12-password: "${{ secrets.APPLE_CERTIFICATE_P12_PASSWORD }}"
 
       - name: Import Apple Mobile Provisioning Profile
-        if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') && secrets.APPLE_CERTIFICATE_P12 != '' }}
+        if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') && env.HAS_APPLE_CERT == 'true' }}
         run: |
            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
            echo "${{secrets.APPLE_MOBILE_PROVISIONING_PROFILES_TARGZ_BASE64}}"|base64 --decode | tar xz -C ~/Library/MobileDevice/Provisioning\ Profiles
@@ -272,7 +276,7 @@ jobs:
           make ${{ matrix.platform }}-release
 
       - name: Code Sign
-        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') && secrets.WINDOWS_SIGNING_KEY != '' }}
+        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') && env.HAS_WINDOWS_CERT == 'true' }}
         uses: hiddify/signtool-code-sign-sha256@main
         with:
           certificate: '${{ secrets.WINDOWS_SIGNING_KEY }}'
