@@ -467,39 +467,25 @@ macos-release:
 ios-release: #not tested
 	fastforge package --platform ios --targets ipa --build-export-options-plist  ios/exportOptions.plist $(DISTRIBUTOR_ARGS)
 
-android-libs:
-	$(MKDIR) $(ANDROID_OUT) || echo Folder already exists. Skipping...
-	curl -L $(CORE_URL)/$(CORE_NAME)-android.tar.gz | tar xz -C $(ANDROID_OUT)/
+android-libs: build-android-libs
 
 android-apk-libs: android-libs
 android-aab-libs: android-libs
 
-windows-libs:
-	$(MKDIR) $(DESKTOP_OUT) || echo Folder already exists. Skipping...
-	curl -L $(CORE_URL)/$(CORE_NAME)-windows-amd64.tar.gz | tar xz -C $(DESKTOP_OUT)/
-	ls $(DESKTOP_OUT) || dir $(DESKTOP_OUT)/
-	
+windows-libs: build-windows-libs
 
-linux-amd64-libs:
-	mkdir -p $(DESKTOP_OUT)
-	curl -L $(CORE_URL)/$(CORE_NAME)-linux-amd64.tar.gz | tar xz -C $(DESKTOP_OUT)/
+linux-amd64-libs: build-linux-libs
 
 linux-arm64-libs:
-	mkdir -p $(DESKTOP_OUT)
-	curl -L $(CORE_URL)/$(CORE_NAME)-linux-arm64.tar.gz | tar xz -C $(DESKTOP_OUT)/
+	make -C hiddify-core -f Makefile linux-arm64
 
 linux-amd64-musl-libs:
-	mkdir -p $(DESKTOP_OUT)
-	curl -L $(CORE_URL)/$(CORE_NAME)-linux-amd64-musl.tar.gz | tar xz -C $(DESKTOP_OUT)/
+	make -C hiddify-core -f Makefile linux-custom
 
 linux-arm64-musl-libs:
-	mkdir -p $(DESKTOP_OUT)
-	curl -L $(CORE_URL)/$(CORE_NAME)-linux-arm64-musl.tar.gz | tar xz -C $(DESKTOP_OUT)/
+	make -C hiddify-core -f Makefile linux-custom
 
-
-macos-libs:
-	mkdir -p  $(DESKTOP_OUT) 
-	curl -L $(CORE_URL)/$(CORE_NAME)-macos.tar.gz | tar xz -C $(DESKTOP_OUT)
+macos-libs: build-macos-libs
 
 ios-libs: #not tested
 	mkdir -p $(IOS_OUT)

@@ -11,8 +11,7 @@ on:
     branches:
        - main
        - dev
-       - android-fix-action-bug
-       - new-design-v2 
+       - enable-route-rules
     paths-ignore:
       - '**.md'
       - 'docs/**'

@@ -40,12 +40,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
       - uses: subosito/flutter-action@v2.21.0 #issue with 2.13
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
           cache: true
-          
+
       - name: Prepare
         run: make linux-amd64-prepare
       - name: Test
@@ -117,25 +122,29 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
 
       - name: Import Apple Codesign Certificates
-        if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') }}
+        if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') && secrets.APPLE_CERTIFICATE_P12 != '' }}
         uses: apple-actions/import-codesign-certs@v6
-        with: 
+        with:
             p12-file-base64: "${{ secrets.APPLE_CERTIFICATE_P12 }}"
             p12-password: "${{ secrets.APPLE_CERTIFICATE_P12_PASSWORD }}"
 
       - name: Import Apple Mobile Provisioning Profile
-        if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') }}
+        if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') && secrets.APPLE_CERTIFICATE_P12 != '' }}
         run: |
            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
            echo "${{secrets.APPLE_MOBILE_PROVISIONING_PROFILES_TARGZ_BASE64}}"|base64 --decode | tar xz -C ~/Library/MobileDevice/Provisioning\ Profiles
            ls ~/Library/MobileDevice/Provisioning\ Profiles
            security unlock-keychain -p "" signing_temp.keychain
            security find-identity -v -p codesigning
-        #   ls ~/Library/MobileDevice/Provisioning\ Profiles
-        #   echo "${{secrets.NEW_APPLE_MOBILE_PROVISIONING_PROFILES_TARXZ_BASE64}}"|base64 --decode | tar xJ -C ~/Library/MobileDevice/Provisioning\ Profiles
-        #   # echo "${{secrets.NEW_APPLE_MOBILE_PROVISIONING_PROFILES_TARGZ_BASE64_2}}"|base64 --decode | tar xz -C ~/Library/MobileDevice/Provisioning\ Profiles
           
 
 
@@ -217,13 +226,22 @@ jobs:
           echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
 
       - name: Setup Android Signing Properties
-        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'android') }}
+        if: ${{ startsWith(matrix.platform,'android') }}
         run: |
-          echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 --decode > android/key.jks
-          echo "storeFile=$(pwd)/android/key.jks" > android/key.properties
-          echo "storePassword=${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}" >> android/key.properties
-          echo "keyPassword=${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}" >> android/key.properties
-          echo "keyAlias=${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" >> android/key.properties
+          if [ -n "${{ secrets.ANDROID_SIGNING_KEY }}" ]; then
+            echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 --decode > android/key.jks
+            echo "storeFile=$(pwd)/android/key.jks" > android/key.properties
+            echo "storePassword=${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}" >> android/key.properties
+            echo "keyPassword=${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}" >> android/key.properties
+            echo "keyAlias=${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" >> android/key.properties
+          else
+            echo "No signing key found, generating debug keystore..."
+            keytool -genkey -v -keystore android/key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias key -storepass android -keypass android -dname "CN=Debug,O=Debug,L=Debug,ST=Debug,C=US"
+            echo "storeFile=$(pwd)/android/key.jks" > android/key.properties
+            echo "storePassword=android" >> android/key.properties
+            echo "keyPassword=android" >> android/key.properties
+            echo "keyAlias=key" >> android/key.properties
+          fi
 
       - name: Setup Windows Signing Properties
         if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
@@ -254,7 +272,7 @@ jobs:
           make ${{ matrix.platform }}-release
 
       - name: Code Sign
-        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
+        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') && secrets.WINDOWS_SIGNING_KEY != '' }}
         uses: hiddify/signtool-code-sign-sha256@main
         with:
           certificate: '${{ secrets.WINDOWS_SIGNING_KEY }}'
@@ -414,19 +432,7 @@ jobs:
           body_path: './release.md'
           prerelease: true
 
-      - name: Create or Update Draft Release
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_FOR_HIDDIFY_APP_REPO }}
-          GITHUB_REPOSITORY: hiddify/hiddify-app
-        with:
-          files: ./out/*
-          name: 'draft'
-          tag_name: 'draft'
-          body_path: './release.md'
-          target_commitish: '530bf77839a74d4f13847ba244a20734ac7ab119'
-          prerelease: true
-          repository: hiddify/hiddify-app
+      # Removed: push to upstream hiddify/hiddify-app (not applicable for fork)
 
   upload-release:
     permissions: write-all

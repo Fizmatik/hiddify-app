@@ -1,4 +1,4 @@
 [submodule "hiddify-core"]
 	path = hiddify-core
-	url = ssh://git@github.com/Fizmatik/hiddify-core
+	url = https://github.com/Fizmatik/hiddify-core
 	branch = enable-route-rules
