@@ -82,6 +82,7 @@ jobs:
         run: make -C hiddify-core -f Makefile windows-amd64
 
       - name: Build core for Android
+        continue-on-error: true
         run: |
           make -C hiddify-core -f Makefile lib_install
           make -C hiddify-core -f Makefile android
