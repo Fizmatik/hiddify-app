@@ -74,7 +74,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
 
       - name: Build core for Linux
-        run: make -C hiddify-core -f Makefile linux-amd64
+        run: |
+          make -C hiddify-core -f Makefile cronet-amd64
+          make -C hiddify-core -f Makefile linux-amd64
 
       - name: Build core for Windows (cross-compile)
         run: make -C hiddify-core -f Makefile windows-amd64
