@@ -469,9 +469,14 @@ ios-release: #not tested
 
 # If core is pre-built (CI artifact), skip; otherwise build from submodule
 android-libs:
-	@if [ -f $(BINDIR)/$(LIB_NAME).aar ] || [ -f $(ANDROID_OUT)/$(LIB_NAME).aar ]; then \
-		echo "Core already built, skipping android-libs"; \
-		[ -f $(BINDIR)/$(LIB_NAME).aar ] && { mkdir -p $(ANDROID_OUT); mv $(BINDIR)/$(LIB_NAME).aar $(ANDROID_OUT)/; } || true; \
+	@if [ -f "$(ANDROID_OUT)/$(LIB_NAME).aar" ]; then \
+		echo "Core .aar already in $(ANDROID_OUT), skipping"; \
+	elif [ -f "$(BINDIR)/$(LIB_NAME).aar" ]; then \
+		echo "Core .aar found in $(BINDIR), moving to $(ANDROID_OUT)"; \
+		mkdir -p $(ANDROID_OUT); cp $(BINDIR)/$(LIB_NAME).aar $(ANDROID_OUT)/; \
+	elif [ -n "$$IS_GITHUB_ACTIONS" ]; then \
+		echo "ERROR: Android core .aar not found and cannot build in CI without gomobile"; \
+		exit 1; \
 	else \
 		make build-android-libs; \
 	fi
