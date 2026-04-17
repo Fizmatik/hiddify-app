@@ -86,13 +86,27 @@ jobs:
           mkdir -p /tmp/core-windows
           cp -r hiddify-core/bin/* /tmp/core-windows/
 
+      - name: Setup Java (Android core)
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android NDK r28
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28
+
       - name: Build core for Android
         continue-on-error: true
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           make -C hiddify-core -f Makefile lib_install
           make -C hiddify-core -f Makefile android
           mkdir -p /tmp/core-android
-          cp -r hiddify-core/bin/* /tmp/core-android/
+          cp -r hiddify-core/bin/* /tmp/core-android/ 2>/dev/null || echo "no android artifacts"
 
       - name: Upload Linux core
         uses: actions/upload-artifact@v6
