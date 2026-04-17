@@ -492,9 +492,7 @@ windows-libs:
 	fi
 
 linux-amd64-libs:
-	@echo "Checking for pre-built core at $(DESKTOP_OUT)/lib/$(LIB_NAME).so ..."; \
-	ls -la $(DESKTOP_OUT)/lib/ 2>/dev/null || true; \
-	if [ -f "$(DESKTOP_OUT)/lib/$(LIB_NAME).so" ]; then \
+	@if [ -f "$(DESKTOP_OUT)/lib/$(LIB_NAME).so" ]; then \
 		echo "Core already present, skipping build"; \
 	else \
 		echo "Core not found, building from source..."; \
